@@ -1,6 +1,6 @@
 #include <iostream>
 #include <SDL2/SDL.h>
-#include <glad/glad.h>
+//#include <glad/glad.h>
 #include "chip8.hpp"
 #include <thread> 
 #include <chrono> 
