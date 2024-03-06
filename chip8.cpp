@@ -104,7 +104,7 @@ chip8::chip8()
 bool chip8::load_file(char const *filename)
 {
 
-  // creates an input filestream object, opens the file in binary mode, which reads teh data in its binary form with translation to preserve exact format
+  // creates an input filestream object, opens the file in binary mode, which reads the data in its binary form with translation to preserve exact format
   // std::ios::ate (at end), sets the file pointer at the end of the file, useful to find the size of the file, since the file pointer will be at the end immediatley upon opening
   std::ifstream file(filename, std::ios::binary | std::ios::ate);
 
@@ -120,8 +120,8 @@ bool chip8::load_file(char const *filename)
     file.seekg(0, std::ios::beg);
     file.read((char *)memory + 0x200, size);
     file.close();
-    return true; 
   }
+  return true; 
 }
 
 void chip8::emulate_cycle()
@@ -131,10 +131,10 @@ void chip8::emulate_cycle()
   pc += 2;
   /* get first nibble from the opcode, and use it to index into the correct tbale array
   table array contains pointers to member functions of the chip8 class,
-  we use (*this).* to dereference a pointer to a member function of a class, 'this' is a pointer fto the current instance of the chip8 class,
-  '*' derefernces the pointer to the ocurrent instance of the class, resulting in the object itself, while the second "*" dereferences the pointer to the member function
+  we use (*this).* to dereference a pointer to a member function of a class, 'this' is a pointer to the current instance of the chip8 class,
+  '*' derefernces the pointer to the current instance of the class, resulting in the object itself, while the second "*" dereferences the pointer to the member function
   after dereferencing the pointer to the member function, the final set of parenthesis calls the memebr function with no args, as given by implementation*/
-  ((*this).*(table[(opcode & 0xF000) >> 12u]))();
+  ((*this).*(table[(opcode & 0xF000) >> 12]))();
 
   if (delay_timer == 0)
   {
@@ -164,7 +164,7 @@ void chip8::TableE()
 
 void chip8::TableF()
 {
-  ((*this).*(tableF[opcode & 0x000F]))(); 
+  ((*this).*(tableF[opcode & 0x00FF]))(); 
 }
 
 // clear the display
@@ -195,8 +195,9 @@ void chip8::op_1NNN()
 // call subroutine at nnn, increments the stack pointer, puts current pc on top of stack, then sets pc to nnnn
 void chip8::op_2NNN()
 {
-  ++sp;
+  
   stack[sp] = pc;
+  ++sp;
   short address = opcode & 0x0FFF;
   pc = address;
 }
@@ -204,7 +205,7 @@ void chip8::op_2NNN()
 // skips next instruction if Vx = kk, compares register Vx to kk, if equal, increment pc by 2 to skip next instruction
 void chip8::op_3xkk()
 {
-  short vx = opcode & 0x0F00 >> 8u;
+  short vx = opcode & 0x0F00 >> 8;
   short kk = opcode & 0x00FF;
 
   if (V[vx] == kk)
@@ -216,7 +217,7 @@ void chip8::op_3xkk()
 // skips next instruction if Vx != kk
 void chip8::op_4xkk()
 {
-  short vx = opcode & 0x0F00 >> 8u;
+  short vx = opcode & 0x0F00 >> 8;
   short kk = opcode & 0x00FF;
 
   if (V[vx] != kk)
@@ -228,8 +229,8 @@ void chip8::op_4xkk()
 // skips next instruction if registed Vx == Vy
 void chip8::op_5xy0()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
 
   if (V[vx] == V[vy])
   {
@@ -240,7 +241,7 @@ void chip8::op_5xy0()
 // ld vx, byte, puts value kk inside register vx
 void chip8::op_6xkk()
 {
-  short vx = opcode & 0x0F00 >> 8u;
+  short vx = opcode & 0x0F00 >> 8;
   short kk = opcode & 0x00FF;
 
   V[vx] = kk;
@@ -249,7 +250,7 @@ void chip8::op_6xkk()
 // add vx, byte - adds value kk to register vx, stores result in vx
 void chip8::op_7xkk()
 {
-  short vx = opcode & 0x0F00 >> 8u;
+  short vx = opcode & 0x0F00 >> 8;
   short kk = opcode & 0x00FF;
 
   V[vx] += kk;
@@ -258,8 +259,8 @@ void chip8::op_7xkk()
 // ld vx, vy - sets register vx with value in register vy
 void chip8::op_8xy0()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
 
   V[vx] = V[vy];
 }
@@ -267,8 +268,8 @@ void chip8::op_8xy0()
 // or vx, vy - stores value of bitwise OR vx, vy in register vx
 void chip8::op_8xy1()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
 
   V[vx] |= V[vy];
 }
@@ -276,8 +277,8 @@ void chip8::op_8xy1()
 // and vx, vy - stores value of bitwise AND vx, vy in register vx
 void chip8::op_8xy2()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
 
   V[vx] &= V[vy];
 }
@@ -285,8 +286,8 @@ void chip8::op_8xy2()
 // xor vx, vy - stores value of bitwise XOR vx, vy, in register vx
 void chip8::op_8xy3()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
 
   V[vx] ^= V[vy];
 }
@@ -294,8 +295,8 @@ void chip8::op_8xy3()
 // add vx, vy - set vx = vx + vy, set vf = carry, the values of vx and vy are added together, if result is greater than 8 bits, VF is set to 1, otherwise 0
 void chip8::op_8xy4()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
   short sum = V[vx] + V[vy];
   if (sum > 255)
   {
@@ -311,8 +312,8 @@ void chip8::op_8xy4()
 // sub vx, vy - set vx = vx - vy, if vx > vy, vf set to 1, otherwise 0, then vy subtracted from vx and result stored in vx;
 void chip8::op_8xy5()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
   short diff = V[vx] - V[vy];
   if (V[vx] > V[vy])
   {
@@ -328,7 +329,7 @@ void chip8::op_8xy5()
 // shr vx {, vy} - if the least significant bit of vx is 1, then vf is set to 1, otherwise 0, then vx divided by 2
 void chip8::op_8xy6()
 {
-  short vx = opcode & 0x0F00 >> 8u;
+  short vx = opcode & 0x0F00 >> 8;
   if ((V[vx] & 0x1) == 1)
   {
     V[0xF] = 1;
@@ -343,8 +344,8 @@ void chip8::op_8xy6()
 // subn vx, vy - set vx = vy - vx, if vy > vx, vf set to 1, otherwise 0, then store diff in vx
 void chip8::op_8xy7()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
   short diff = V[vy] - V[vx];
   if (V[vy] > V[vx])
   {
@@ -360,7 +361,7 @@ void chip8::op_8xy7()
 // shl vx, {. vy} - if most significant bit of vx is 1, then vf is set to 1, otherwise 0, then vx *= 2
 void chip8::op_8xye()
 {
-  short vx = opcode & 0x0F00 >> 8u;
+  short vx = opcode & 0x0F00 >> 8;
   V[0xF] = V[vx] & 0x80 >> 7; 
   V[vx] <<= 1; 
 }
@@ -368,8 +369,8 @@ void chip8::op_8xye()
 // sne vx, vy - skip next instruction if vx != vy
 void chip8::op_9xy0()
 {
-  short vx = opcode & 0x0F00 >> 8u;
-  short vy = opcode & 0x00F0 >> 4u;
+  short vx = opcode & 0x0F00 >> 8;
+  short vy = opcode & 0x00F0 >> 4;
   if (V[vx] != V[vy])
   {
     pc += 2;
@@ -395,7 +396,7 @@ void chip8::op_Cxkk()
 {
   unsigned short random_number = static_cast<unsigned short>(rand() % 256);
   unsigned short kk = opcode & 0x00FF;
-  short vx = opcode & 0x0F00 >> 8u;
+  short vx = opcode & 0x0F00 >> 8;
   V[vx] = kk & random_number;
 }
 
@@ -406,8 +407,8 @@ is outisde the coordinates of the display, it wraps around to the opposide side 
 width of 8 pixels, and height of N pixels, */
 void chip8::op_Dxyn()
 {
-  unsigned short vx= opcode & 0x0F00 >> 8u; 
-  unsigned short vy = opcode & 0x00F0 >> 4u; 
+  unsigned short vx= opcode & 0x0F00 >> 8; 
+  unsigned short vy = opcode & 0x00F0 >> 4; 
   unsigned short byte = opcode & 0x000F; 
 
   unsigned short x_pos  = V[vx] % 64; 
