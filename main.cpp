@@ -9,7 +9,7 @@
 // clang++ main.cpp ./glad/src/glad.c -I/Library/Frameworks/SDL2.framework/Headers -I./glad/include -F/Library/Frameworks -framework SDL2
 
 unsigned short keymap[16] = {
-    SDLK_x,  // Use a comma here instead of a semicolon
+    SDLK_x,  
     SDLK_1, 
     SDLK_2, 
     SDLK_3,
@@ -24,7 +24,7 @@ unsigned short keymap[16] = {
     SDLK_4,
     SDLK_r,
     SDLK_f,
-    SDLK_v,  // It's okay to have a trailing comma in C++ array initializers
+    SDLK_v,  
 };
 
 
