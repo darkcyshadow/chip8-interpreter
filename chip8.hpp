@@ -19,7 +19,7 @@ private:
     // program counter
     unsigned short pc;
 
-    // delay timer
+     // delay timer
     unsigned char delay_timer;
     // sound timer
     unsigned char sound_timer;
@@ -109,11 +109,14 @@ public:
     unsigned int video[62 * 34];
     unsigned short keypad[16]; 
     bool draw_flag; 
+   
 
     chip8();
 
     void emulate_cycle();
     bool load_file(char const *filename);
+    void decrement_timers(); 
+    
 
    
 };
