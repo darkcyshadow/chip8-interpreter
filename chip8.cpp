@@ -36,6 +36,7 @@ chip8::chip8()
   opcode = 0;
   I = 0;
   sp = 0;
+  draw_flag = false;
 
   delay_timer = 0;
   sound_timer = 0;
@@ -105,7 +106,7 @@ void chip8::decrement_timers()
 {
   if (delay_timer > 0)
   {
-    --delay_timer; 
+    --delay_timer;
   }
 }
 
@@ -132,25 +133,20 @@ bool chip8::load_file(char const *filename)
   return true;
 }
 
-
 void chip8::emulate_cycle()
 {
-  
-  for (int i = 0; i < 10; i++)
-  {
-    // get the current instruction from memory, shift left 8 bits, to combine with the next half of the instruction
-    opcode = (memory[pc] << 8u | memory[pc + 1]);
-    pc += 2;
-    /* get first nibble from the opcode, and use it to index into the correct tbale array
-    table array contains pointers to member functions of the chip8 class,
-    we use (*this).* to dereference a pointer to a member function of a class, 'this' is a pointer to the current instance of the chip8 class,
-    '*' derefernces the pointer to the current instance of the class, resulting in the object itself, while the second "*" dereferences the pointer to the member function
-    after dereferencing the pointer to the member function, the final set of parenthesis calls the memebr function with no args, as given by implementation*/
-    ((*this).*(table[(opcode & 0xF000) >> 12]))();
 
-    decrement_timers(); 
+  // get the current instruction from memory, shift left 8 bits, to combine with the next half of the instruction
+  opcode = (memory[pc] << 8u | memory[pc + 1]);
+  pc += 2;
+  /* get first nibble from the opcode, and use it to index into the correct tbale array
+  table array contains pointers to member functions of the chip8 class,
+  we use (*this).* to dereference a pointer to a member function of a class, 'this' is a pointer to the current instance of the chip8 class,
+  '*' derefernces the pointer to the current instance of the class, resulting in the object itself, while the second "*" dereferences the pointer to the member function
+  after dereferencing the pointer to the member function, the final set of parenthesis calls the memebr function with no args, as given by implementation*/
+  ((*this).*(table[(opcode & 0xF000) >> 12]))();
 
-  } 
+  decrement_timers();
 }
 
 void chip8::Table0()
@@ -194,7 +190,7 @@ void chip8::op_00EE()
 // set the pc to nnn
 void chip8::op_1NNN()
 {
-  short address = opcode & 0x0FFF;
+  uint16_t address = opcode & 0x0FFF;
   pc = address;
 }
 
@@ -204,15 +200,15 @@ void chip8::op_2NNN()
 
   stack[sp] = pc;
   ++sp;
-  short address = opcode & 0x0FFF;
+  uint16_t address = opcode & 0x0FFF;
   pc = address;
 }
 
 // skips next instruction if Vx = kk, compares register Vx to kk, if equal, increment pc by 2 to skip next instruction
 void chip8::op_3xkk()
 {
-  short vx = (opcode & 0x0F00) >> 8;
-  short kk = opcode & 0x00FF;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t kk = opcode & 0x00FF;
 
   if (V[vx] == kk)
   {
@@ -223,8 +219,8 @@ void chip8::op_3xkk()
 // skips next instruction if Vx != kk
 void chip8::op_4xkk()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short kk = opcode & 0x00FF;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t kk = opcode & 0x00FF;
 
   if (V[vx] != kk)
   {
@@ -235,8 +231,8 @@ void chip8::op_4xkk()
 // skips next instruction if registed Vx == Vy
 void chip8::op_5xy0()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
 
   if (V[vx] == V[vy])
   {
@@ -247,8 +243,8 @@ void chip8::op_5xy0()
 // ld vx, byte, puts value kk inside register vx
 void chip8::op_6xkk()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short kk = opcode & 0x00FF;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t kk = opcode & 0x00FF;
 
   V[vx] = kk;
 }
@@ -256,8 +252,8 @@ void chip8::op_6xkk()
 // add vx, byte - adds value kk to register vx, stores result in vx
 void chip8::op_7xkk()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short kk = opcode & 0x00FF;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t kk = opcode & 0x00FF;
 
   V[vx] += kk;
 }
@@ -265,8 +261,8 @@ void chip8::op_7xkk()
 // ld vx, vy - sets register vx with value in register vy
 void chip8::op_8xy0()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
+  uint8_t vx = (opcode & 0x0F00)>> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
 
   V[vx] = V[vy];
 }
@@ -274,8 +270,8 @@ void chip8::op_8xy0()
 // or vx, vy - stores value of bitwise OR vx, vy in register vx
 void chip8::op_8xy1()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
+  uint8_t vx = (opcode & 0x0F00 )>> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
 
   V[vx] |= V[vy];
 }
@@ -283,8 +279,8 @@ void chip8::op_8xy1()
 // and vx, vy - stores value of bitwise AND vx, vy in register vx
 void chip8::op_8xy2()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
 
   V[vx] &= V[vy];
 }
@@ -292,8 +288,8 @@ void chip8::op_8xy2()
 // xor vx, vy - stores value of bitwise XOR vx, vy, in register vx
 void chip8::op_8xy3()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
 
   V[vx] ^= V[vy];
 }
@@ -301,9 +297,9 @@ void chip8::op_8xy3()
 // add vx, vy - set vx = vx + vy, set vf = carry, the values of vx and vy are added together, if result is greater than 8 bits, VF is set to 1, otherwise 0
 void chip8::op_8xy4()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
-  short sum = V[vx] + V[vy];
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
+  uint16_t sum = V[vx] + V[vy];
   if (sum > 255)
   {
     V[0xF] = 1;
@@ -318,10 +314,10 @@ void chip8::op_8xy4()
 // sub vx, vy - set vx = vx - vy, if vx > vy, vf set to 1, otherwise 0, then vy subtracted from vx and result stored in vx;
 void chip8::op_8xy5()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
-  short diff = V[vx] - V[vy];
-  short temp = 0;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
+  uint16_t diff = V[vx] - V[vy];
+  uint8_t temp = 0;
   if (V[vx] >= V[vy])
   {
     temp = 1;
@@ -337,8 +333,8 @@ void chip8::op_8xy5()
 // shr vx {, vy} - if the least significant bit of vx is 1, then vf is set to 1, otherwise 0, then vx divided by 2
 void chip8::op_8xy6()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short temp = 0;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t temp = 0;
   if ((V[vx] & 0x1) == 1)
   {
     temp = 1;
@@ -354,10 +350,10 @@ void chip8::op_8xy6()
 // subn vx, vy - set vx = vy - vx, if vy > vx, vf set to 1, otherwise 0, then store diff in vx
 void chip8::op_8xy7()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
-  short diff = V[vy] - V[vx];
-  short temp = 0;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
+  uint8_t diff = V[vy] - V[vx];
+  uint8_t temp = 0;
   if (V[vy] >= V[vx])
   {
     temp = 1;
@@ -373,8 +369,8 @@ void chip8::op_8xy7()
 // shl vx, {. vy} - if most significant bit of vx is 1, then vf is set to 1, otherwise 0, then vx *= 2
 void chip8::op_8xye()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short temp = V[vx] & 0x80 >> 7;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t temp = V[vx] & 0x80 >> 7;
   V[vx] <<= 1;
   V[0xF] = temp;
 }
@@ -382,8 +378,8 @@ void chip8::op_8xye()
 // sne vx, vy - skip next instruction if vx != vy
 void chip8::op_9xy0()
 {
-  short vx = opcode & 0x0F00 >> 8;
-  short vy = opcode & 0x00F0 >> 4;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
   if (V[vx] != V[vy])
   {
     pc += 2;
@@ -393,23 +389,23 @@ void chip8::op_9xy0()
 // ld i, addr, the value of resiter I is set to nnn
 void chip8::op_Annn()
 {
-  short address = opcode & 0x0FFF;
-  V[I] = address;
+  uint16_t address = opcode & 0x0FFF;
+  I = address;
 }
 
 // jp v0, addr - the program counter is set to nnn plus the value of v0
 void chip8::op_Bnnn()
 {
-  short address = opcode & 0x0FFF;
+  uint16_t address = opcode & 0x0FFF;
   pc = address + V[0x0];
 }
 
 // rnd vx, byte - generate a random number from 0-255, AND with value kk, and store in register vx
 void chip8::op_Cxkk()
 {
-  unsigned short random_number = static_cast<unsigned short>(rand() % 256);
-  unsigned short kk = opcode & 0x00FF;
-  short vx = opcode & 0x0F00 >> 8;
+  uint8_t random_number = static_cast<unsigned short>(rand() % 256);
+  uint8_t kk = opcode & 0x00FF;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   V[vx] = kk & random_number;
 }
 
@@ -420,25 +416,25 @@ is outisde the coordinates of the display, it wraps around to the opposide side 
 width of 8 pixels, and height of N pixels, */
 void chip8::op_Dxyn()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
-  unsigned short vy = opcode & 0x00F0 >> 4;
-  unsigned short byte = opcode & 0x000F;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t vy = (opcode & 0x00F0)>> 4;
+  uint8_t byte = opcode & 0x000F;
 
-  unsigned short x_pos = V[vx] % 64;
-  unsigned short y_pos = V[vy] % 32;
+  uint8_t x_pos = V[vx] % 64;
+  uint8_t y_pos = V[vy] % 32;
 
   V[0xF] = 0;
 
-  for (unsigned short row = 0; row < byte; row++)
+  for (uint8_t row = 0; row < byte; row++)
   {
-    unsigned short sprite_byte = memory[I + row];
-    for (unsigned short col = 0; col < 8; col++)
+    uint8_t sprite_byte = memory[I + row];
+    for (uint8_t col = 0; col < 8; col++)
     {
       // checks each byte in the sprite to see whether it is on, shift by col from 0 - 8 as they are stored left to right, and we want to check every col
 
-      unsigned short sprite_pixel = sprite_byte & (0x80u >> col);
+      uint8_t sprite_pixel = sprite_byte & (0x80u >> col);
       // stores address of the screen pixel to be drawn, multiply
-      unsigned int *screen_pixel = &video[(y_pos + row) * 64 + (x_pos + col)];
+      uint32_t *screen_pixel = &video[(y_pos + row) * 64 + (x_pos + col)];
 
       if (sprite_pixel)
       {
@@ -456,7 +452,7 @@ void chip8::op_Dxyn()
 // skp vx - skips next instruction if key with the value of vx is pressed
 void chip8::op_Ex9E()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   if (keypad[V[vx] & 0xF])
   {
     pc += 2;
@@ -466,7 +462,7 @@ void chip8::op_Ex9E()
 // sknp vx - skips next instrucion if key with value of vx is not pressed
 void chip8::op_ExA1()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   if (!keypad[V[vx] & 0xF])
   {
     pc += 2;
@@ -476,14 +472,14 @@ void chip8::op_ExA1()
 // ld vx, dt - value of delay timer is placed into vx
 void chip8::op_Fx07()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   V[vx] = delay_timer;
 }
 
 // ld vx, k - wait for a key press store the value of key in vx, all execution stops until a key is pressed, then the value of that key is stored in vx
 void chip8::op_Fx0A()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   bool key_press = false;
   for (int i = 0; i < 16; ++i)
   {
@@ -502,36 +498,36 @@ void chip8::op_Fx0A()
 // ld dt, vx - set delay timer with value of vx
 void chip8::op_Fx15()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   delay_timer = V[vx];
 }
 
 // ld st, vx - set sound timer to value of vx
 void chip8::op_Fx18()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   sound_timer = V[vx];
 }
 
 // add i, vx - values of I and vx are added and stored in I
 void chip8::op_Fx1E()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   I += V[vx];
 }
 
 // ld f, vx - value of I is set to the location for the hexadeciaml sprite corresponding to the value of vx
 void chip8::op_Fx29()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = opcode & 0x0F00 >> 8;
   I = memory[(V[vx] * 5) & 0xF];
 }
 
 // ld b, vx - interpreter takes decimal vaue of vx, places 100's digit at memory location I, 10's digit at I + 1, 1's digit at I + 2
 void chip8::op_Fx33()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
-  unsigned short value = V[vx];
+  uint8_t vx = (opcode & 0x0F00) >> 8;
+  uint8_t value = V[vx];
   memory[I] = value % 100;
   value /= 10;
   memory[I + 1] = value % 10;
@@ -542,7 +538,7 @@ void chip8::op_Fx33()
 // ld I, vx - stores registers v0-vx in memory starting at location I
 void chip8::op_Fx55()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   for (int i = 0; i <= vx; i++)
   {
     memory[I++] = V[i];
@@ -552,7 +548,7 @@ void chip8::op_Fx55()
 // ld vx, I - reads registers v0-vx from memory starting at location I
 void chip8::op_Fx65()
 {
-  unsigned short vx = opcode & 0x0F00 >> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   for (int i = 0; i <= vx; i++)
   {
     V[i] = memory[I++];

@@ -3,7 +3,7 @@
 // #include <glad/glad.h>
 #include "chip8.hpp"
 #include <thread>
-#include <chrono>
+#include <unistd.h>
 
 // clang++ main.cpp ./glad/src/glad.c -I/Library/Frameworks/SDL2.framework/Headers -I./glad/include -F/Library/Frameworks -framework SDL2
 
@@ -26,117 +26,90 @@ unsigned short keymap[16] = {
     SDLK_v,
 };
 
-int main(int argc, char **argv)
+int main(int argc, char* argv[])
 {
-    if (argc != 2)
-    {
-        std::cout << "Usage: chip8 <ROM file>" << std::endl;
-        return 1;
+    if (argc <= 1){
+        exit(1); 
     }
 
-    chip8 cpu = chip8();
-    int w = 1024;
-    int h = 512;
-    SDL_Window *window = NULL;
+    chip8 cpu; 
+    if (!cpu.load_file(argv[1])){
+        exit(1); 
+    }
 
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+    SDL_Window *window; 
+    SDL_Renderer *renderer;
+    SDL_Texture *texture; 
+
+    if (SDL_Init(SDL_INIT_EVERYTHING) < 0){
+        SDL_Quit(); 
+        exit(1); 
+    }
+
+    window = SDL_CreateWindow("Chip8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 320, SDL_WINDOW_SHOWN); 
+    if (window == nullptr){
+        SDL_Quit(); 
+        exit(1); 
+    }
+    renderer = SDL_CreateRenderer(window, -1, 0);
+    if (renderer == nullptr){
+        SDL_Quit(); 
+        exit(1); 
+    }
+
+    SDL_RenderSetLogicalSize(renderer, 640, 320); 
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 64, 32);
+    if (texture == nullptr)
     {
-        std::cout << "SDL could not be initialized. SDL_ERRor: %s\n", SDL_GetError();
+        SDL_Quit();
         exit(1);
     }
 
-    window = SDL_CreateWindow(
-        "CHIP_8 Emulator",
-        SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        w, h, SDL_WINDOW_SHOWN);
-
-    if (window == NULL)
-    {
-        std::cout << "SDL could not be initialized. SDL_ERRor: %s\n", SDL_GetError();
-        exit(2);
-    }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_RenderSetLogicalSize(renderer, w, h);
-
-    SDL_Texture *sdlTexture = SDL_CreateTexture(renderer,
-                                                SDL_PIXELFORMAT_ARGB8888,
-                                                SDL_TEXTUREACCESS_STREAMING,
-                                                64, 32);
-
-    uint32_t pixels[2048];
-
-load_file:
-    if (!cpu.load_file(argv[1]))
-    {
-        return 2;
-    }
-
-    uint32_t start_time;
-    uint32_t delta_time;
-
     while (true)
     {
-        for (int i = 0; i < 60; i++)
-        {
-            cpu.decrement_timers(); 
-            cpu.emulate_cycle();
-        }
-        SDL_Event e;
-        while (SDL_PollEvent(&e))
-        {
-            if (e.type == SDL_QUIT)
-            {
-                exit(0);
+        cpu.emulate_cycle(); 
+        SDL_Event event; 
+        while (SDL_PollEvent(&event)){
+            if (event.type == SDL_QUIT){
+                exit(0); 
             }
-            if (e.type == SDL_KEYDOWN)
-            {
-                if (e.key.keysym.sym == SDLK_ESCAPE)
-                {
-                    exit(0);
+            if (event.type == SDL_KEYDOWN){
+                if (event.key.keysym.sym == SDLK_ESCAPE){
+                    exit(0); 
                 }
-
-                if (e.key.keysym.sym == SDLK_F1)
-                {
-                    goto load_file;
-                }
-
-                for (int i = 0; i < 16; ++i)
-                {
-                    if (e.key.keysym.sym == keymap[i])
-                    {
-                        cpu.keypad[i] = 1;
+                for (int i = 0; i < 16; i++){
+                    if (event.key.keysym.sym == keymap[i]){
+                        cpu.keypad[i] = 1; 
                     }
                 }
             }
-            if (e.type == SDL_KEYUP)
-            {
-                for (int i = 0; i < 16; ++i)
-                {
-                    if (e.key.keysym.sym == keymap[i])
-                    {
-                        cpu.keypad[i] = 0;
+
+            if (event.type == SDL_KEYUP){
+                for (int i = 0; i < 16; i++){
+                    if (event.key.keysym.sym == keymap[i]){
+                        cpu.keypad[i] = 0; 
                     }
                 }
             }
         }
-        if (cpu.draw_flag)
-        {
-            cpu.draw_flag = false;
+        if (cpu.draw_flag){
+            cpu.draw_flag = false; 
+            uint32_t pixels[32 * 64]; 
+            for (int i = 0; i < 2048; i++){
+                if (cpu.video[i] == 0){
+                    pixels[i] = 0xFF000000; 
+                } else 
+                {
+                    pixels[i] = 0xFFFFFFFF; 
+                }
 
-            for (int i = 0; i < 2048; ++i)
-            {
-                uint8_t pixel = cpu.video[i];
-                pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
             }
-
-            SDL_UpdateTexture(sdlTexture, NULL, pixels, 64 * sizeof(Uint32));
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, sdlTexture, NULL, NULL);
-            SDL_RenderPresent(renderer);
+            SDL_UpdateTexture(texture, NULL, pixels, 64 * sizeof(uint32_t)); 
+            SDL_RenderClear(renderer); 
+            SDL_RenderCopy(renderer, texture, NULL, NULL); 
+            SDL_RenderPresent(renderer); 
         }
-        
 
-         std::this_thread::sleep_for(std::chrono::microseconds(16));
+        usleep(1600); 
     }
 }

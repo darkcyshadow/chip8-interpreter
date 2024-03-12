@@ -3,30 +3,30 @@
 
 #include <cstdlib>
 #include <ctime> 
-
+#include <stdint.h>
 
 class chip8
 {
 private:
     // memory size of 4k, char is 1 byte
-    unsigned char memory[4096];
+    uint8_t memory[4096];
     // current opcode, size of each opcode is 2 bytes
-    unsigned short opcode;
+    uint16_t opcode;
     // registers v0-vf, each register is 8 bits
-    unsigned short V[16];
+    uint8_t V[16];
     // index register
-    unsigned short I;
+    uint16_t I;
     // program counter
-    unsigned short pc;
+    uint16_t pc;
 
      // delay timer
-    unsigned char delay_timer;
+    uint8_t delay_timer;
     // sound timer
     unsigned char sound_timer;
     // 16-level stack
-    unsigned short stack[16];
+    uint16_t stack[16];
     // stack pointer
-    unsigned short sp;
+    uint8_t sp;
 
     //const int mem_start = 0x200;
 
@@ -106,7 +106,7 @@ private:
 
 public:
     // video screen
-    unsigned int video[62 * 34];
+    uint32_t video[62 * 34];
     unsigned short keypad[16]; 
     bool draw_flag; 
    
