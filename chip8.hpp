@@ -114,8 +114,9 @@ public:
     chip8();
 
     void emulate_cycle();
-    bool load_file(char const *filename);
+    bool load_file(const char *filename);
     void decrement_timers(); 
+   // bool verify_file(const char* filename); 
     
 
    

@@ -5,6 +5,9 @@
 #include <cstring>
 #include <cstdint>
 #include <ctime>
+#include <iostream>
+
+std::ofstream log_file;
 
 unsigned char chip8_fontset[80] =
     {
@@ -28,6 +31,8 @@ unsigned char chip8_fontset[80] =
 
 chip8::chip8()
 {
+  log_file.open("chip8_instruction_log.txt");
+
   // seed rng
   srand(time(0));
 
@@ -110,6 +115,8 @@ void chip8::decrement_timers()
   }
 }
 
+
+
 bool chip8::load_file(char const *filename)
 {
 
@@ -117,19 +124,22 @@ bool chip8::load_file(char const *filename)
   // std::ios::ate (at end), sets the file pointer at the end of the file, useful to find the size of the file, since the file pointer will be at the end immediatley upon opening
   std::ifstream file(filename, std::ios::binary | std::ios::ate);
 
-  if (file.is_open())
+  if (!file.is_open())
   {
-    std::streampos size = file.tellg();
-    size_t memory_size = sizeof(memory) - 0x200;
-    if (static_cast<size_t>(size) > memory_size)
-    {
-      return false;
-    }
-
-    file.seekg(0, std::ios::beg);
-    file.read((char *)memory + 0x200, size);
-    file.close();
+    return false;
   }
+
+  std::streampos size = file.tellg();
+  size_t memory_size = sizeof(memory) - 0x200;
+  if ((size) > memory_size)
+  {
+    return false;
+  }
+
+  file.seekg(0, std::ios::beg);
+  file.read((char *)memory + 0x200, size);
+  file.close();
+
   return true;
 }
 
@@ -138,6 +148,11 @@ void chip8::emulate_cycle()
 
   // get the current instruction from memory, shift left 8 bits, to combine with the next half of the instruction
   opcode = (memory[pc] << 8u | memory[pc + 1]);
+  if (log_file.is_open())
+  {
+    log_file << "PC: " << std::hex << pc << ", "
+             << "opcode: " << opcode << std::endl;
+  }
   pc += 2;
   /* get first nibble from the opcode, and use it to index into the correct tbale array
   table array contains pointers to member functions of the chip8 class,
@@ -146,7 +161,7 @@ void chip8::emulate_cycle()
   after dereferencing the pointer to the member function, the final set of parenthesis calls the memebr function with no args, as given by implementation*/
   ((*this).*(table[(opcode & 0xF000) >> 12]))();
 
-  decrement_timers();
+  // decrement_timers();
 }
 
 void chip8::Table0()
@@ -156,7 +171,7 @@ void chip8::Table0()
 
 void chip8::Table8()
 {
-  ((*this).*(tableF[opcode & 0x000F]))();
+  ((*this).*(table8[opcode & 0x000F]))();
 }
 
 void chip8::TableE()
@@ -261,7 +276,7 @@ void chip8::op_7xkk()
 // ld vx, vy - sets register vx with value in register vy
 void chip8::op_8xy0()
 {
-  uint8_t vx = (opcode & 0x0F00)>> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   uint8_t vy = (opcode & 0x00F0) >> 4;
 
   V[vx] = V[vy];
@@ -270,7 +285,7 @@ void chip8::op_8xy0()
 // or vx, vy - stores value of bitwise OR vx, vy in register vx
 void chip8::op_8xy1()
 {
-  uint8_t vx = (opcode & 0x0F00 )>> 8;
+  uint8_t vx = (opcode & 0x0F00) >> 8;
   uint8_t vy = (opcode & 0x00F0) >> 4;
 
   V[vx] |= V[vy];
@@ -300,15 +315,17 @@ void chip8::op_8xy4()
   uint8_t vx = (opcode & 0x0F00) >> 8;
   uint8_t vy = (opcode & 0x00F0) >> 4;
   uint16_t sum = V[vx] + V[vy];
+  uint8_t temp = 0; 
   if (sum > 255)
   {
-    V[0xF] = 1;
+    temp = 1;
   }
   else
   {
-    V[0xF] = 0;
+    temp = 0;
   }
   V[vx] = sum & 0xFF;
+  V[0xF] = temp; 
 }
 
 // sub vx, vy - set vx = vx - vy, if vx > vy, vf set to 1, otherwise 0, then vy subtracted from vx and result stored in vx;
@@ -334,7 +351,7 @@ void chip8::op_8xy5()
 void chip8::op_8xy6()
 {
   uint8_t vx = (opcode & 0x0F00) >> 8;
-  uint8_t temp = 0;
+  uint8_t temp;
   if ((V[vx] & 0x1) == 1)
   {
     temp = 1;
@@ -343,7 +360,7 @@ void chip8::op_8xy6()
   {
     temp = 0;
   }
-  V[vx] *= 2;
+  V[vx] /= 2;
   V[0xF] = temp;
 }
 
@@ -370,7 +387,7 @@ void chip8::op_8xy7()
 void chip8::op_8xye()
 {
   uint8_t vx = (opcode & 0x0F00) >> 8;
-  uint8_t temp = V[vx] & 0x80 >> 7;
+  uint8_t temp = (V[vx] & 0x80) >> 7;
   V[vx] <<= 1;
   V[0xF] = temp;
 }
@@ -417,7 +434,7 @@ width of 8 pixels, and height of N pixels, */
 void chip8::op_Dxyn()
 {
   uint8_t vx = (opcode & 0x0F00) >> 8;
-  uint8_t vy = (opcode & 0x00F0)>> 4;
+  uint8_t vy = (opcode & 0x00F0) >> 4;
   uint8_t byte = opcode & 0x000F;
 
   uint8_t x_pos = V[vx] % 64;
@@ -524,16 +541,19 @@ void chip8::op_Fx29()
 }
 
 // ld b, vx - interpreter takes decimal vaue of vx, places 100's digit at memory location I, 10's digit at I + 1, 1's digit at I + 2
-void chip8::op_Fx33()
-{
+void chip8::op_Fx33() {
   uint8_t vx = (opcode & 0x0F00) >> 8;
   uint8_t value = V[vx];
-  memory[I] = value % 100;
+
+  memory[I + 2] = value % 10;
   value /= 10;
+
   memory[I + 1] = value % 10;
   value /= 10;
-  memory[I + 2] = value % 10;
+
+  memory[I] = value % 10;
 }
+
 
 // ld I, vx - stores registers v0-vx in memory starting at location I
 void chip8::op_Fx55()
